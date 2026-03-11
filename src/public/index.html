@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LocalShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --primary-dark: #5A52D5;
+      --primary-glow: rgba(108, 99, 255, 0.25);
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --bg: #080812;
+      --card: #0f0f1e;
+      --card2: #13132a;
+      --card3: #1a1a35;
+      --text: #e8e8f0;
+      --text-muted: #6b6b8a;
+      --border: #1e1e3a;
+      --border-bright: #2a2a50;
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== BACKGROUND GRID ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--card3);
+      border: 1px solid var(--border-bright);
+      border-radius: 30px;
+      padding: 10px 22px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: none;
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    #toast.visible {
+      display: block;
+      animation: toastAnim 3s forwards;
+    }
+
+    @keyframes toastAnim {
+      0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      75% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    }
+
+    /* ===== INCOMING NOTIFICATION ===== */
+    #incomingNotification {
+      display: none;
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--card);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 22px;
+      width: 340px;
+      box-shadow: 0 8px 40px var(--primary-glow);
+      z-index: 999;
+    }
+
+    #incomingNotification.visible {
+      display: block;
+      animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(120px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .notif-avatar {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .notif-title { font-weight: 700; font-size: 1rem; }
+    .notif-subtitle { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+    .notif-file {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+
+    .notif-file-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .notif-file-size { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+
+    .notif-actions { display: flex; gap: 8px; }
+
+    .btn-accept {
+      flex: 1; padding: 10px;
+      background: var(--success);
+      color: white; border: none;
+      border-radius: 10px; cursor: pointer;
+      font-weight: 700; font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity 0.2s;
+    }
+    .btn-accept:hover { opacity: 0.85; }
+
+    .btn-reject {
+      flex: 1; padding: 10px;
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      border-radius: 10px; cursor: pointer;
+      font-weight: 700; font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-reject:hover { background: rgba(231,76,60,0.1); }
+
+    /* ===== SETUP SCREEN ===== */
+    #setupScreen {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .setup-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .setup-logo {
+      font-size: 3.5rem;
+      margin-bottom: 12px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .setup-title {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #ffffff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .setup-subtitle {
+      color: var(--text-muted);
+      margin-bottom: 44px;
+      font-size: 0.95rem;
+    }
+
+    .setup-card {
+      background: var(--card);
+      border: 1px solid var(--border-bright);
+      border-radius: 24px;
+      padding: 36px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .setup-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(108,99,255,0.3), transparent 50%);
+      z-index: -1;
+    }
+
+    .setup-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .setup-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--card2);
+      border: 1.5px solid var(--border-bright);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 14px;
+    }
+
+    .setup-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .setup-input::placeholder { color: var(--text-muted); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 6px 28px rgba(108,99,255,0.4);
+    }
+
+    .btn-primary:active { transform: scale(0.98); }
+
+    /* ===== MAIN APP ===== */
+    #mainApp { display: none; position: relative; z-index: 1; }
+
+    .app-header {
+      background: rgba(15, 15, 30, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .app-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .device-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card2);
+      border: 1px solid var(--border-bright);
+      border-radius: 30px;
+      padding: 7px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: blink 2.5s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--success); }
+      50% { opacity: 0.4; box-shadow: none; }
+    }
+
+    #headerDeviceName { color: var(--text); font-weight: 600; }
+
+    .app-content {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 640px) {
+      .app-content { grid-template-columns: 1fr; padding: 16px; }
+      .app-header { padding: 12px 16px; }
+    }
+
+    .col { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: var(--border-bright); }
+
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== ROOM CARD ===== */
+    .btn-create {
+      width: 100%;
+      padding: 11px;
+      background: var(--card2);
+      border: 1.5px solid var(--border-bright);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .btn-create:hover {
+      border-color: var(--primary);
+      background: rgba(108,99,255,0.06);
+    }
+
+    .room-input-group { display: flex; gap: 8px; }
+
+    .room-input {
+      flex: 1;
+      padding: 11px 14px;
+      background: var(--card2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .room-input:focus { border-color: var(--primary); }
+    .room-input::placeholder { color: var(--text-muted); letter-spacing: 0; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; text-transform: none; }
+
+    .btn-join {
+      padding: 11px 18px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+
+    .btn-join:hover { background: var(--primary-dark); }
+
+    .room-code-display {
+      display: none;
+      background: var(--card2);
+      border: 1px solid var(--border-bright);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      margin-top: 14px;
+    }
+
+    .room-code-display.visible { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .room-code-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .room-code-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 2.2rem;
+      font-weight: 500;
+      color: var(--primary);
+      letter-spacing: 8px;
+    }
+
+    .room-code-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+
+    /* ===== QR CARD ===== */
+    .qr-container { text-align: center; }
+
+    .qr-code-wrap {
+      background: white;
+      border-radius: 14px;
+      padding: 14px;
+      display: inline-block;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .qr-code-wrap img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
+
+    .qr-url {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      word-break: break-all;
+      background: var(--card2);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .qr-placeholder {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 20px;
+    }
+
+    /* ===== DEVICES CARD ===== */
+    .devices-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .device-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--card2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.1s;
+    }
+
+    .device-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+
+    .device-card.selected {
+      border-color: var(--primary);
+      background: rgba(108,99,255,0.08);
+    }
+
+    .device-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .device-info { flex: 1; min-width: 0; }
+    .device-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .device-status { font-size: 0.72rem; color: var(--success); margin-top: 2px; }
+
+    .device-check {
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .device-card.selected .device-check { opacity: 1; }
+
+    .no-devices {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 24px 16px;
+    }
+
+    /* ===== SEND FILE CARD ===== */
+    .drop-zone {
+      border: 2px dashed var(--border-bright);
+      border-radius: 14px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(108,99,255,0.04);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+    .drop-text { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+    .drop-text strong { color: var(--text); }
+
+    .selected-file {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: var(--card2);
+      border: 1px solid var(--border-bright);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 12px;
+    }
+
+    .selected-file.visible { display: flex; animation: fadeIn 0.2s ease; }
+
+    .file-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+    .btn-send {
+      width: 100%;
+      padding: 13px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px var(--primary-glow);
+    }
+
+    .btn-send:hover { background: var(--primary-dark); }
+    .btn-send:disabled { background: var(--border); box-shadow: none; cursor: not-allowed; }
+
+    /* ===== PROGRESS CARD ===== */
+    .progress-card { display: none; }
+    .progress-card.visible { display: block; animation: fadeIn 0.3s ease; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .progress-filename {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .progress-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .progress-track {
+      background: var(--card2);
+      border-radius: 20px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #a78bfa);
+      border-radius: 20px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ===== DOWNLOADS CARD ===== */
+    #downloadsCard { display: none; }
+
+    .download-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .download-item:hover { border-color: var(--primary); background: rgba(108,99,255,0.05); }
+    .download-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .download-info { flex: 1; min-width: 0; }
+    .download-name { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .download-label { font-size: 0.72rem; color: var(--success); margin-top: 2px; }
+    .download-arrow { color: var(--text-muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- ===== TOAST ===== -->
+<div id="toast"></div>
+
+<!-- ===== INCOMING NOTIFICATION ===== -->
+<div id="incomingNotification">
+  <div class="notif-header">
+    <div class="notif-avatar">📥</div>
+    <div>
+      <div class="notif-title">Incoming File</div>
+      <div class="notif-subtitle" id="notifSender">from someone</div>
+    </div>
+  </div>
+  <div class="notif-file">
+    <div class="notif-file-name" id="notifFileName">file.pdf</div>
+    <div class="notif-file-size" id="notifFileSize">0 KB</div>
+  </div>
+  <div class="notif-actions">
+    <button class="btn-accept" onclick="acceptTransfer()">✅ Accept</button>
+    <button class="btn-reject" onclick="rejectTransfer()">❌ Decline</button>
+  </div>
+</div>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="setupScreen">
+  <div class="setup-glow"></div>
+  <div class="setup-logo">📡</div>
+  <div class="setup-title">LocalShare</div>
+  <div class="setup-subtitle">Instant file sharing on your local network</div>
+  <div class="setup-card">
+    <label class="setup-label">Your display name</label>
+    <input
+      class="setup-input"
+      id="deviceNameInput"
+      placeholder="e.g. Rashed's Laptop"
+      onkeydown="if(event.key==='Enter') submitName()"
+      autofocus
+    />
+    <button class="btn-primary" onclick="submitName()">
+      Start sharing →
+    </button>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp">
+
+  <div class="app-header">
+    <div class="app-header-left">
+      <div class="app-logo-icon">📡</div>
+      <div class="app-title">LocalShare</div>
+    </div>
+    <div class="device-badge">
+      <div class="status-dot"></div>
+      <span id="headerDeviceName">...</span>
+    </div>
+  </div>
+
+  <div class="app-content">
+
+    <!-- Left Column -->
+    <div class="col">
+
+      <!-- Room Card -->
+      <div class="card">
+        <div class="card-title">📡 Room</div>
+        <button class="btn-create" onclick="createRoom()">＋ Create New Room</button>
+        <div class="room-input-group">
+          <input class="room-input" id="roomCode" placeholder="Enter room code" maxlength="6" />
+          <button class="btn-join" onclick="joinRoom()">Join</button>
+        </div>
+        <div class="room-code-display" id="roomCodeDisplay">
+          <div class="room-code-label">Your Room Code</div>
+          <div class="room-code-value" id="roomCodeValue">------</div>
+          <div class="room-code-hint">Share this code — or let others scan the QR below</div>
+        </div>
+      </div>
+
+      <!-- QR Card -->
+      <div class="card">
+        <div class="card-title">📱 Scan to Join Room</div>
+        <div class="qr-container" id="qrContainer">
+          <div class="qr-placeholder">Create a room to generate a QR code</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column -->
+    <div class="col">
+
+      <!-- Devices Card -->
+      <div class="card">
+        <div class="card-title">👥 Devices in Room</div>
+        <div class="devices-list" id="deviceList">
+          <div class="no-devices">Join a room to see devices</div>
+        </div>
+      </div>
+
+      <!-- Send File Card -->
+      <div class="card">
+        <div class="card-title">📤 Send File</div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" onchange="handleFileSelect(this.files[0])" />
+          <div class="drop-icon">📁</div>
+          <div class="drop-text">
+            <strong>Drop a file here</strong><br/>or click to browse
+          </div>
+        </div>
+        <div class="selected-file" id="selectedFileInfo">
+          <div class="file-icon" id="selectedFileIcon">📄</div>
+          <div class="file-info">
+            <div class="file-name" id="selectedFileName">No file selected</div>
+            <div class="file-size" id="selectedFileSize">—</div>
+          </div>
+        </div>
+        <button class="btn-send" onclick="sendFile()">Send File</button>
+      </div>
+
+      <!-- Progress Card -->
+      <div class="card progress-card" id="progressCard">
+        <div class="card-title">⏳ Transfer Progress</div>
+        <div class="progress-header">
+          <div class="progress-filename" id="progressFileName">Transferring...</div>
+          <div class="progress-pct" id="progressPct">0%</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+      </div>
+
+      <!-- Downloads Card -->
+      <div class="card" id="downloadsCard">
+        <div class="card-title">⬇️ Received Files</div>
+        <div id="downloadArea"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const CHUNK_SIZE = 64 * 1024;
+  const socket = io();
+
+  let currentRoom = null;
+  let myDeviceId = null;
+  let myDeviceName = null;
+  let selectedReceiverId = null;
+  let selectedFile = null;
+  let pendingTransfer = null;
+
+  // ===== HELPERS =====
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = '';
+    void toast.offsetWidth; // force reflow so animation restarts
+    toast.className = 'visible';
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function getFileIcon(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const icons = {
+      pdf: '📕', doc: '📝', docx: '📝', txt: '📄',
+      jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', webp: '🖼️',
+      mp4: '🎬', mov: '🎬', avi: '🎬',
+      mp3: '🎵', wav: '🎵', flac: '🎵',
+      zip: '📦', rar: '📦', '7z': '📦',
+      xls: '📊', xlsx: '📊', csv: '📊',
+      ppt: '📋', pptx: '📋',
+    };
+    return icons[ext] || '📄';
+  }
+
+  // ===== CHECK URL FOR AUTO-JOIN =====
+  // When phone scans QR code, URL has ?room=XXXX
+  // We store it and auto-join after name is set
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoJoinCode = urlParams.get('room');
+
+  if (autoJoinCode) {
+    // Pre-fill the room code input so user can see it
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('roomCode');
+      if (input) input.value = autoJoinCode.toUpperCase();
+    });
+  }
+
+  // ===== SETUP =====
+  function submitName() {
+    const name = document.getElementById('deviceNameInput').value.trim();
+    if (!name) { showToast('Please enter your name!'); return; }
+
+    myDeviceName = name;
+    socket.emit('rename-device', { newName: name });
+
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('headerDeviceName').textContent = name;
+
+    // Auto-join room if came from QR code scan
+    if (autoJoinCode) {
+      setTimeout(() => {
+        socket.emit('join-room', { code: autoJoinCode.toUpperCase() });
+        showToast(`🔗 Auto-joining room ${autoJoinCode.toUpperCase()}...`);
+      }, 600);
+    }
+  }
+
+  // ===== QR CODE =====
+  async function loadQRCode(roomCode) {
+    try {
+      // Get server base URL
+      const infoRes = await fetch('/info');
+      const infoData = await infoRes.json();
+
+      // Build join URL with room code embedded
+      const joinUrl = `${infoData.url}?room=${roomCode}`;
+
+      // Get QR code image for that join URL
+      const qrRes = await fetch(`/info/qr?url=${encodeURIComponent(joinUrl)}`);
+      const qrData = await qrRes.json();
+
+      // Show QR code and URL
+      document.getElementById('qrContainer').innerHTML = `
+        <div class="qr-code-wrap">
+          <img src="${qrData.qrImage}" alt="QR Code" />
+        </div>
+        <div class="qr-url">${joinUrl}</div>
+      `;
+    } catch (e) {
+      console.error('QR load failed', e);
+    }
+  }
+
+  // ===== CONNECTION =====
+  socket.on('welcome', (data) => {
+    myDeviceId = data.yourDevice.id;
+  });
+
+  socket.on('device-joined', (data) => {
+    showToast(`📱 ${data.device.name} is online`);
+  });
+
+  socket.on('device-left', (data) => {
+    showToast(`👋 ${data.deviceName} disconnected`);
+    if (data.deviceId === selectedReceiverId) {
+      selectedReceiverId = null;
+      showToast('⚠️ Selected device disconnected!');
+    }
+  });
+
+  // ===== ROOM =====
+  function createRoom() {
+    socket.emit('create-room');
+  }
+
+  function joinRoom() {
+    const code = document.getElementById('roomCode').value.trim().toUpperCase();
+    if (!code) { showToast('Enter a room code!'); return; }
+    socket.emit('join-room', { code });
+  }
+
+  socket.on('room-created', (data) => {
+    currentRoom = data.room.code;
+    document.getElementById('roomCodeDisplay').className = 'room-code-display visible';
+    document.getElementById('roomCodeValue').textContent = data.room.code;
+    showToast(`🏠 Room ${data.room.code} created!`);
+    socket.emit('get-room-devices', { roomCode: data.room.code });
+    // Generate QR code with room code embedded in URL
+    loadQRCode(data.room.code);
+  });
+
+  socket.on('room-joined', (data) => {
+    currentRoom = data.room.code;
+    document.getElementById('roomCodeDisplay').className = 'room-code-display visible';
+    document.getElementById('roomCodeValue').textContent = data.room.code;
+    showToast(`✅ Joined room ${data.room.code}!`);
+    socket.emit('get-room-devices', { roomCode: data.room.code });
+  });
+
+  socket.on('room-error', (data) => {
+    showToast(`❌ ${data.message}`);
+  });
+
+  socket.on('device-joined-room', (data) => {
+    showToast(`📱 ${data.device.name} joined the room!`);
+    if (currentRoom) socket.emit('get-room-devices', { roomCode: currentRoom });
+  });
+
+  socket.on('device-left-room', (data) => {
+    showToast(`👋 ${data.device.name} left the room`);
+    if (currentRoom) socket.emit('get-room-devices', { roomCode: currentRoom });
+  });
+
+  // ===== DEVICE LIST =====
+  socket.on('room-devices', (data) => {
+    const deviceList = document.getElementById('deviceList');
+    const others = data.devices.filter(d => d.id !== myDeviceId);
+
+    if (others.length === 0) {
+      deviceList.innerHTML = '<div class="no-devices">No other devices in room yet</div>';
+      return;
+    }
+
+    deviceList.innerHTML = '';
+    others.forEach(device => {
+      const card = document.createElement('div');
+      card.className = 'device-card' + (device.id === selectedReceiverId ? ' selected' : '');
+      card.innerHTML = `
+        <div class="device-avatar">💻</div>
+        <div class="device-info">
+          <div class="device-name">${device.name}</div>
+          <div class="device-status">● Online</div>
+        </div>
+        <div class="device-check">✅</div>
+      `;
+      card.onclick = () => {
+        document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedReceiverId = device.id;
+        showToast(`🎯 Sending to: ${device.name}`);
+      };
+      deviceList.appendChild(card);
+    });
+  });
+
+  // ===== FILE SELECT =====
+  function handleFileSelect(file) {
+    if (!file) return;
+    selectedFile = file;
+    document.getElementById('selectedFileInfo').className = 'selected-file visible';
+    document.getElementById('selectedFileIcon').textContent = getFileIcon(file.name);
+    document.getElementById('selectedFileName').textContent = file.name;
+    document.getElementById('selectedFileSize').textContent = formatSize(file.size);
+  }
+
+  // Drag and drop
+  const dropZone = document.getElementById('dropZone');
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  });
+
+  // ===== SEND FILE =====
+  async function sendFile() {
+    if (!selectedReceiverId) { showToast('❌ Select a device first!'); return; }
+    if (!selectedFile) { showToast('❌ Select a file first!'); return; }
+
+    const file = selectedFile;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    document.getElementById('progressCard').className = 'card progress-card visible';
+    document.getElementById('progressFileName').textContent = file.name;
+
+    socket.emit('transfer-request', {
+      receiverId: selectedReceiverId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type || 'application/octet-stream',
+      totalChunks,
+    });
+
+    showToast('📤 Waiting for receiver to accept...');
+
+    socket.once('transfer-accepted', async (data) => {
+      showToast('✅ Accepted! Sending...');
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunkBuffer = await file.slice(start, end).arrayBuffer();
+
+        socket.emit('transfer-chunk', {
+          transferId: data.transferId,
+          chunkIndex: i,
+          chunk: chunkBuffer,
+          receiverId: selectedReceiverId,
+        });
+
+        const pct = Math.round(((i + 1) / totalChunks) * 100);
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressPct').textContent = pct + '%';
+      }
+    });
+
+    socket.once('transfer-rejected', () => {
+      showToast('❌ Transfer was declined!');
+      document.getElementById('progressCard').className = 'card progress-card';
+    });
+  }
+
+  socket.on('transfer-done', () => {
+    showToast('✅ File sent successfully!');
+    document.getElementById('progressCard').className = 'card progress-card';
+  });
+
+  // ===== RECEIVE FILE =====
+  socket.on('transfer-incoming', (data) => {
+    const { metadata } = data;
+    pendingTransfer = metadata;
+
+    document.getElementById('notifSender').textContent = `from ${metadata.senderName}`;
+    document.getElementById('notifFileName').textContent = metadata.fileName;
+    document.getElementById('notifFileSize').textContent = formatSize(metadata.fileSize);
+    document.getElementById('incomingNotification').className = 'visible';
+  });
+
+  function acceptTransfer() {
+    if (!pendingTransfer) return;
+    socket.emit('transfer-accept', { transferId: pendingTransfer.transferId, metadata: pendingTransfer });
+    document.getElementById('incomingNotification').className = '';
+
+    document.getElementById('progressCard').className = 'card progress-card visible';
+    document.getElementById('progressFileName').textContent = pendingTransfer.fileName;
+
+    showToast('✅ Accepted! Receiving...');
+    pendingTransfer = null;
+  }
+
+  function rejectTransfer() {
+    if (!pendingTransfer) return;
+    socket.emit('transfer-reject', { transferId: pendingTransfer.transferId, senderId: pendingTransfer.senderId });
+    document.getElementById('incomingNotification').className = '';
+    showToast('❌ Transfer declined');
+    pendingTransfer = null;
+  }
+
+  socket.on('transfer-progress', (data) => {
+    document.getElementById('progressBar').style.width = data.percentage + '%';
+    document.getElementById('progressPct').textContent = data.percentage + '%';
+  });
+
+  socket.on('transfer-complete', (data) => {
+    showToast(`🎉 ${data.fileName} received!`);
+
+    const byteCharacters = atob(data.fileData);
+    const byteArray = new Uint8Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteArray[i] = byteCharacters.charCodeAt(i);
+    }
+    const blob = new Blob([byteArray], { type: data.fileType });
+    const url = URL.createObjectURL(blob);
+
+    document.getElementById('downloadsCard').style.display = 'block';
+
+    const item = document.createElement('a');
+    item.href = url;
+    item.download = data.fileName;
+    item.className = 'download-item';
+    item.innerHTML = `
+      <div class="download-icon">${getFileIcon(data.fileName)}</div>
+      <div class="download-info">
+        <div class="download-name">${data.fileName}</div>
+        <div class="download-label">Tap to download</div>
+      </div>
+      <div class="download-arrow">↓</div>
+    `;
+    document.getElementById('downloadArea').prepend(item);
+    document.getElementById('progressCard').className = 'card progress-card';
+  });
+
+  socket.on('transfer-cancelled', (data) => {
+    showToast(`❌ Cancelled: ${data.reason}`);
+    document.getElementById('progressCard').className = 'card progress-card';
+  });
+
+  socket.on('transfer-error', (data) => {
+    showToast(`❌ Error: ${data.message}`);
+  });
+</script>
+</body>
+</html>

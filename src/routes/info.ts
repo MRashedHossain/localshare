@@ -16,10 +16,13 @@ router.get("/", async (req: Request, res: Response) => {
     })
 })
 
-router.get("/qr",async (req: Request, res: Response) =>{
-    const ServerInfo = getServerInfo(Number(process.env.PORT || 3000))
-    const qr = await QRCode.toDataURL(ServerInfo.url)
-    res.json({qr})
-})
+router.get("/qr", async (req: Request, res: Response) => {
+  const customUrl = req.query.url as string;
+  const serverInfo = getServerInfo(Number(process.env.PORT) || 3000);
+  const targetUrl = customUrl || serverInfo.url;
+
+  const qrImage = await QRCode.toDataURL(targetUrl);
+  res.json({ qrImage });
+});
 
 export default router

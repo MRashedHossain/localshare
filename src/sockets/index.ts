@@ -93,6 +93,11 @@ export function setupSockets(httpserver: HTTPServer): void {
 
             socket.emit('room-joined',{room})
 
+            socket.to(room.code).emit('device-joined-room', {
+                device,
+                totalDevices: room.devices.length
+            })
+
             console.log(`✅ ${device.name} joined room: ${room.code}`)
         })
 
