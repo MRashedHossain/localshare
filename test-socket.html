@@ -1,39 +1,99 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>LocalShare Test</title>
+  <title>LocalShare</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    #log { background: #f0f0f0; padding: 10px; height: 300px; overflow-y: auto; margin: 10px 0; }
+
+    /* Setup Screen Styles */
+    #setupScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+    }
+    #setupScreen h1 { font-size: 2rem; margin-bottom: 10px; }
+    #setupScreen p { color: #666; margin-bottom: 20px; }
+    #setupScreen input {
+      padding: 12px;
+      font-size: 1rem;
+      width: 300px;
+      border: 2px solid #007bff;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    #setupScreen button {
+      padding: 12px 32px;
+      font-size: 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 324px;
+    }
+    #setupScreen button:hover { background: #0056b3; }
+
+    /* Main App Styles */
+    #mainApp { display: none; }
+    #log { background: #f0f0f0; padding: 10px; height: 200px; overflow-y: auto; margin: 10px 0; }
     button { margin: 5px; padding: 8px 16px; cursor: pointer; }
     input { margin: 5px; padding: 8px; }
     #progress { width: 100%; background: #ddd; border-radius: 4px; display: none; }
     #progressBar { width: 0%; height: 20px; background: #4CAF50; border-radius: 4px; text-align: center; color: white; }
+    .device-btn { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 8px 16px; margin: 4px; }
+    .device-btn:hover { background: #0056b3; }
+    .device-btn.selected { background: #28a745; }
+    #selectedReceiver { color: green; font-weight: bold; margin: 5px 0; }
+    #myDeviceName { color: #007bff; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>LocalShare File Transfer Test</h1>
-  <div id="status">Connecting...</div>
-  <div id="log"></div>
 
-  <hr/>
-  <h3>Room</h3>
-  <button onclick="createRoom()">Create Room</button>
-  <input id="roomCode" placeholder="Enter room code" />
-  <button onclick="joinRoom()">Join Room</button>
-
-  <hr/>
-  <h3>Send File</h3>
-  <input type="text" id="receiverId" placeholder="Receiver's device ID" />
-  <input type="file" id="fileInput" />
-  <button onclick="sendFile()">Send File</button>
-
-  <hr/>
-  <h3>Progress</h3>
-  <div id="progress">
-    <div id="progressBar">0%</div>
+  <!-- ===== SCREEN 1: Setup ===== -->
+  <div id="setupScreen">
+    <h1>📡 LocalShare</h1>
+    <p>What should others call you?</p>
+    <input
+      id="deviceNameInput"
+      placeholder="e.g. Rashed's Laptop"
+      onkeydown="if(event.key === 'Enter') submitName()"
+    />
+    <button onclick="submitName()">Join LocalShare →</button>
   </div>
-  <div id="downloadArea"></div>
+
+  <!-- ===== SCREEN 2: Main App ===== -->
+  <div id="mainApp">
+    <h1>📡 LocalShare</h1>
+    <div id="status">Connecting...</div>
+    <p>👤 You are: <span id="myDeviceName">...</span></p>
+    <div id="log"></div>
+
+    <hr/>
+    <h3>Room</h3>
+    <button onclick="createRoom()">Create Room</button>
+    <input id="roomCode" placeholder="Enter room code" />
+    <button onclick="joinRoom()">Join Room</button>
+
+    <hr/>
+    <h3>Devices in Room</h3>
+    <button onclick="refreshDevices()">🔄 Refresh Devices</button>
+    <div id="deviceList"><p>Join a room to see devices</p></div>
+    <div id="selectedReceiver"></div>
+
+    <hr/>
+    <h3>Send File</h3>
+    <input type="file" id="fileInput" />
+    <button onclick="sendFile()">Send File</button>
+
+    <hr/>
+    <h3>Progress</h3>
+    <div id="progress">
+      <div id="progressBar">0%</div>
+    </div>
+    <div id="downloadArea"></div>
+  </div>
 
   <script src="http://localhost:3000/socket.io/socket.io.js"></script>
   <script>
@@ -44,28 +104,50 @@
     const socket = io('http://localhost:3000');
     let currentRoom = null;
     let myDeviceId = null;
+    let myDeviceName = null;
+    let selectedReceiverId = null;
 
     function addLog(msg) {
-      console.log(msg); // also log to browser console
+      console.log(msg);
       log.innerHTML += `<p>${msg}</p>`;
       log.scrollTop = log.scrollHeight;
     }
 
+    // --- Setup Screen ---
+    function submitName() {
+      const name = document.getElementById('deviceNameInput').value.trim();
+
+      if (!name) {
+        alert('Please enter your name!');
+        return;
+      }
+
+      // Save name locally
+      myDeviceName = name;
+
+      // Tell server our chosen name
+      socket.emit('rename-device', { newName: name });
+
+      // Hide setup screen
+      document.getElementById('setupScreen').style.display = 'none';
+
+      // Show main app
+      document.getElementById('mainApp').style.display = 'block';
+
+      // Show name in main app
+      document.getElementById('myDeviceName').textContent = name;
+
+      addLog(`👤 Your name set to: ${name}`);
+    }
+
     // --- Connection Events ---
     socket.on('connect', () => {
-      addLog(`🔌 Socket connected! Raw ID: ${socket.id}`);
-    });
-
-    socket.on('connect_error', (err) => {
-      addLog(`❌ Connection error: ${err.message}`);
+      console.log(`🔌 Connected! ID: ${socket.id}`);
     });
 
     socket.on('welcome', (data) => {
       status.textContent = '✅ Connected!';
       myDeviceId = data.yourDevice.id;
-      addLog(`👋 ${data.message}`);
-      addLog(`🆔 Your ID: ${data.yourDevice.id}`);
-      addLog(`📛 Your Name: ${data.yourDevice.name}`);
     });
 
     socket.on('device-list', (data) => {
@@ -78,28 +160,45 @@
 
     socket.on('device-left', (data) => {
       addLog(`➖ ${data.deviceName} left!`);
+      if (data.deviceId === selectedReceiverId) {
+        selectedReceiverId = null;
+        document.getElementById('selectedReceiver').textContent = '';
+        addLog(`⚠️ Your selected receiver disconnected!`);
+      }
+    });
+
+    socket.on('device-renamed', (data) => {
+      addLog(`✏️ ${data.device.name} is now in the session`);
     });
 
     // --- Room Events ---
     function createRoom() {
-      addLog(`📤 Emitting create-room...`);
       socket.emit('create-room');
     }
 
     function joinRoom() {
       const code = document.getElementById('roomCode').value;
-      addLog(`📤 Emitting join-room with code: ${code}`);
       socket.emit('join-room', { code });
+    }
+
+    function refreshDevices() {
+      if (!currentRoom) {
+        addLog('❌ Join a room first!');
+        return;
+      }
+      socket.emit('get-room-devices', { roomCode: currentRoom });
     }
 
     socket.on('room-created', (data) => {
       currentRoom = data.room.code;
       addLog(`🏠 Room created! Code: <strong>${data.room.code}</strong>`);
+      socket.emit('get-room-devices', { roomCode: data.room.code });
     });
 
     socket.on('room-joined', (data) => {
       currentRoom = data.room.code;
       addLog(`✅ Joined room: <strong>${data.room.code}</strong>`);
+      socket.emit('get-room-devices', { roomCode: data.room.code });
     });
 
     socket.on('room-error', (data) => {
@@ -107,46 +206,70 @@
     });
 
     socket.on('device-joined-room', (data) => {
-      addLog(`➕ ${data.device.name} joined the room! Their ID: <strong>${data.device.id}</strong>`);
+      addLog(`➕ ${data.device.name} joined the room!`);
+      if (currentRoom) socket.emit('get-room-devices', { roomCode: currentRoom });
     });
 
     socket.on('device-left-room', (data) => {
       addLog(`➖ ${data.device.name} left the room!`);
+      if (currentRoom) socket.emit('get-room-devices', { roomCode: currentRoom });
     });
 
-    socket.on('room-left', (data) => {
-      addLog(`👋 You left room: ${data.code}`);
-      currentRoom = null;
+    socket.on('room-devices', (data) => {
+      const deviceList = document.getElementById('deviceList');
+      deviceList.innerHTML = '';
+
+      // Filter out yourself from the list
+      const otherDevices = data.devices.filter(d => d.id !== myDeviceId);
+
+      if (otherDevices.length === 0) {
+        deviceList.innerHTML = '<p>No other devices in room yet</p>';
+        return;
+      }
+
+      otherDevices.forEach((device) => {
+        const btn = document.createElement('button');
+        btn.className = 'device-btn';
+        btn.textContent = `📱 ${device.name}`;
+        btn.dataset.deviceId = device.id;
+
+        btn.onclick = () => {
+          document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedReceiverId = device.id;
+          document.getElementById('selectedReceiver').textContent =
+            `✅ Sending to: ${device.name}`;
+          addLog(`🎯 Selected: ${device.name}`);
+        };
+
+        deviceList.appendChild(btn);
+      });
     });
 
     // --- File Sending ---
     async function sendFile() {
-      addLog(`🔍 DEBUG: sendFile() called`);
+      if (!selectedReceiverId) {
+        addLog('❌ Please select a device to send to!');
+        return;
+      }
 
-      const receiverId = document.getElementById('receiverId').value;
       const fileInput = document.getElementById('fileInput');
       const file = fileInput.files[0];
-
       if (!file) { addLog('❌ Please select a file!'); return; }
-      if (!receiverId) { addLog('❌ Please enter receiver ID!'); return; }
 
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-      addLog(`📤 Sending: ${file.name} | Size: ${file.size} bytes | Chunks: ${totalChunks}`);
+      addLog(`📤 Sending: ${file.name} | ${totalChunks} chunks`);
 
-      addLog(`🔍 DEBUG: emitting transfer-request to receiverId: ${receiverId}`);
       socket.emit('transfer-request', {
-        receiverId,
+        receiverId: selectedReceiverId,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
         totalChunks,
       });
 
-      addLog(`🔍 DEBUG: waiting for transfer-accepted...`);
-
       socket.once('transfer-accepted', async (data) => {
-        addLog(`🔍 DEBUG: transfer-accepted fired! transferId: ${data.transferId}`);
-        addLog(`✅ Receiver accepted! Starting transfer...`);
+        addLog(`✅ Accepted! Starting transfer...`);
         document.getElementById('progress').style.display = 'block';
 
         for (let i = 0; i < totalChunks; i++) {
@@ -155,12 +278,11 @@
           const chunkBlob = file.slice(start, end);
           const chunkBuffer = await chunkBlob.arrayBuffer();
 
-          addLog(`🔍 DEBUG: sending chunk ${i + 1}/${totalChunks}`);
           socket.emit('transfer-chunk', {
             transferId: data.transferId,
             chunkIndex: i,
             chunk: chunkBuffer,
-            receiverId,
+            receiverId: selectedReceiverId,
           });
 
           const pct = Math.round(((i + 1) / totalChunks) * 100);
@@ -177,34 +299,22 @@
       const { metadata } = data;
       addLog(`📥 Incoming: ${metadata.fileName} from ${metadata.senderId}`);
 
-      const accepted = confirm(`Accept file: ${metadata.fileName}?`);
+      const accepted = confirm(`Accept file: ${metadata.fileName} (${metadata.fileSize} bytes)?`);
 
       if (accepted) {
-        socket.emit('transfer-accept', {
-          transferId: metadata.transferId,
-          metadata,
-        });
-        addLog(`✅ Accepted transfer!`);
+        socket.emit('transfer-accept', { transferId: metadata.transferId, metadata });
+        addLog(`✅ Accepted!`);
       } else {
-        socket.emit('transfer-reject', {
-          transferId: metadata.transferId,
-          senderId: metadata.senderId,
-        });
-        addLog(`❌ Rejected transfer!`);
+        socket.emit('transfer-reject', { transferId: metadata.transferId, senderId: metadata.senderId });
+        addLog(`❌ Rejected!`);
       }
     });
 
     socket.on('transfer-progress', (data) => {
-      addLog(`🔍 DEBUG: transfer-progress fired! ${data.receivedChunks}/${data.totalChunks}`);
       addLog(`📦 Progress: ${data.percentage}%`);
     });
 
-    socket.on('transfer-rejected', (data) => {
-      addLog(`❌ Receiver rejected the transfer!`);
-  });
-
     socket.on('transfer-complete', (data) => {
-      addLog(`🔍 DEBUG: transfer-complete fired! fileName: ${data.fileName}`);
       addLog(`🎉 File received: ${data.fileName}!`);
 
       const byteCharacters = atob(data.fileData);
@@ -225,12 +335,20 @@
       document.getElementById('downloadArea').appendChild(a);
     });
 
-    socket.on('transfer-done', (data) => {
-      addLog(`✅ Transfer complete! ID: ${data.transferId}`);
+    socket.on('transfer-done', () => {
+      addLog(`✅ Transfer complete!`);
+    });
+
+    socket.on('transfer-rejected', () => {
+      addLog(`❌ Receiver rejected the transfer!`);
+    });
+
+    socket.on('transfer-cancelled', (data) => {
+      addLog(`❌ Transfer cancelled: ${data.reason}`);
     });
 
     socket.on('transfer-error', (data) => {
-      addLog(`❌ Transfer error: ${data.message}`);
+      addLog(`❌ Error: ${data.message}`);
     });
   </script>
 </body>

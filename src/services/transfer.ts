@@ -53,3 +53,24 @@ export function assembleFile(session: TransferSession): Buffer {
 export function removeTransferSession(transferId: string): void {
   activeSessions.delete(transferId);
 }
+
+export function getTransfersByDevice(deviceId: string): TransferSession[] {
+    const sessions: TransferSession[] = []
+
+    for(const session of activeSessions.values()){
+        if(session.metadata.senderId === deviceId || session.metadata.receiverId === deviceId){
+            sessions.push(session)
+        }
+    }
+    return sessions
+}
+
+export function cancelDeviceTransfers(deviceId: string): TransferSession[] {
+    const sessions = getTransfersByDevice(deviceId)
+
+    for(const session of sessions){
+        activeSessions.delete(session.metadata.transferId)
+    }
+
+    return sessions
+}

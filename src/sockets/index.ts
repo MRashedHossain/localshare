@@ -1,4 +1,4 @@
-import { createRoom, joinRoom, leaveRoom, getDeviceRoom } from '@/services/room';
+import { createRoom, joinRoom, leaveRoom, getDeviceRoom, getRoom } from '@/services/room';
 import {Server as HTTPServer} from 'http'
 import {Server, Socket} from 'socket.io'
 import {
@@ -10,7 +10,9 @@ import {
   isTransferComplete,
   assembleFile,
   removeTransferSession,
+  cancelDeviceTransfers,
 } from '@/services/transfer'
+import { disconnect } from 'cluster';
 
 interface Device {
     id: string,
@@ -118,12 +120,31 @@ export function setupSockets(httpserver: HTTPServer): void {
             const roomCode = getDeviceRoom(socket.id)
 
             if (roomCode) {
-                leaveRoom(roomCode, socket.id);
+                leaveRoom(roomCode, socket.id)
+
+                const room = getRoom(roomCode)
+                if(!room) return
+                const updatedDevices = room.devices.map(id => connectedDevices.get(id)).filter(Boolean)
+
+                io.to(roomCode).emit('room-devices',{devices: updatedDevices})
+
                 socket.to(roomCode).emit('device-left-room', {
                 device,
                 totalDevices: 0,
                 })
             }
+
+            const cancelledSessions = cancelDeviceTransfers(socket.id)
+
+            for(const session of cancelledSessions){
+                const otherDeviceId = session.metadata.senderId === socket.id?session.metadata.receiverId:session.metadata.senderId
+                io.to(otherDeviceId).emit('transfer-cancelled', {
+                    transferId: session.metadata.transferId,
+                    reason: `${device.name} disconnected`
+                })
+                console.log(`❌ Cancelled transfer ${session.metadata.transferId} due to disconnect`)
+            }
+
             connectedDevices.delete(socket.id)
             console.log(`❌ Device disconnected: ${device.name}`);
             console.log(`📊 Total devices: ${connectedDevices.size}`);
@@ -199,6 +220,19 @@ export function setupSockets(httpserver: HTTPServer): void {
             }
 
         })
+
+        socket.on('get-room-devices', (data: {roomCode: string}) => {
+            const room = getRoom(data.roomCode)
+            if(!room){
+                socket.emit('room-error', {message: 'Room not found'})
+                return
+            }
+
+            const devices = room.devices.map(id => connectedDevices.get(id))
+
+            socket.emit('room-devices', {devices})
+        })
+
         socket.on('transfer-reject', (data: { transferId: string, senderId: string }) => {
             removeTransferSession(data.transferId);
             socket.to(data.senderId).emit('transfer-rejected', {
