@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LocalShare Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #log { background: #f0f0f0; padding: 10px; height: 300px; overflow-y: auto; margin: 10px 0; }
+    button { margin: 5px; padding: 8px 16px; cursor: pointer; }
+    input { margin: 5px; padding: 8px; }
+    #progress { width: 100%; background: #ddd; border-radius: 4px; display: none; }
+    #progressBar { width: 0%; height: 20px; background: #4CAF50; border-radius: 4px; text-align: center; color: white; }
+  </style>
+</head>
+<body>
+  <h1>LocalShare File Transfer Test</h1>
+  <div id="status">Connecting...</div>
+  <div id="log"></div>
+
+  <hr/>
+  <h3>Room</h3>
+  <button onclick="createRoom()">Create Room</button>
+  <input id="roomCode" placeholder="Enter room code" />
+  <button onclick="joinRoom()">Join Room</button>
+
+  <hr/>
+  <h3>Send File</h3>
+  <input type="text" id="receiverId" placeholder="Receiver's device ID" />
+  <input type="file" id="fileInput" />
+  <button onclick="sendFile()">Send File</button>
+
+  <hr/>
+  <h3>Progress</h3>
+  <div id="progress">
+    <div id="progressBar">0%</div>
+  </div>
+  <div id="downloadArea"></div>
+
+  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  <script>
+    const log = document.getElementById('log');
+    const status = document.getElementById('status');
+    const CHUNK_SIZE = 64 * 1024;
+
+    const socket = io('http://localhost:3000');
+    let currentRoom = null;
+    let myDeviceId = null;
+
+    function addLog(msg) {
+      console.log(msg); // also log to browser console
+      log.innerHTML += `<p>${msg}</p>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // --- Connection Events ---
+    socket.on('connect', () => {
+      addLog(`🔌 Socket connected! Raw ID: ${socket.id}`);
+    });
+
+    socket.on('connect_error', (err) => {
+      addLog(`❌ Connection error: ${err.message}`);
+    });
+
+    socket.on('welcome', (data) => {
+      status.textContent = '✅ Connected!';
+      myDeviceId = data.yourDevice.id;
+      addLog(`👋 ${data.message}`);
+      addLog(`🆔 Your ID: ${data.yourDevice.id}`);
+      addLog(`📛 Your Name: ${data.yourDevice.name}`);
+    });
+
+    socket.on('device-list', (data) => {
+      addLog(`📊 Total devices: ${data.devices.length}`);
+    });
+
+    socket.on('device-joined', (data) => {
+      addLog(`➕ ${data.device.name} joined!`);
+    });
+
+    socket.on('device-left', (data) => {
+      addLog(`➖ ${data.deviceName} left!`);
+    });
+
+    // --- Room Events ---
+    function createRoom() {
+      addLog(`📤 Emitting create-room...`);
+      socket.emit('create-room');
+    }
+
+    function joinRoom() {
+      const code = document.getElementById('roomCode').value;
+      addLog(`📤 Emitting join-room with code: ${code}`);
+      socket.emit('join-room', { code });
+    }
+
+    socket.on('room-created', (data) => {
+      currentRoom = data.room.code;
+      addLog(`🏠 Room created! Code: <strong>${data.room.code}</strong>`);
+    });
+
+    socket.on('room-joined', (data) => {
+      currentRoom = data.room.code;
+      addLog(`✅ Joined room: <strong>${data.room.code}</strong>`);
+    });
+
+    socket.on('room-error', (data) => {
+      addLog(`❌ Room error: ${data.message}`);
+    });
+
+    socket.on('device-joined-room', (data) => {
+      addLog(`➕ ${data.device.name} joined the room! Their ID: <strong>${data.device.id}</strong>`);
+    });
+
+    socket.on('device-left-room', (data) => {
+      addLog(`➖ ${data.device.name} left the room!`);
+    });
+
+    socket.on('room-left', (data) => {
+      addLog(`👋 You left room: ${data.code}`);
+      currentRoom = null;
+    });
+
+    // --- File Sending ---
+    async function sendFile() {
+      addLog(`🔍 DEBUG: sendFile() called`);
+
+      const receiverId = document.getElementById('receiverId').value;
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) { addLog('❌ Please select a file!'); return; }
+      if (!receiverId) { addLog('❌ Please enter receiver ID!'); return; }
+
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      addLog(`📤 Sending: ${file.name} | Size: ${file.size} bytes | Chunks: ${totalChunks}`);
+
+      addLog(`🔍 DEBUG: emitting transfer-request to receiverId: ${receiverId}`);
+      socket.emit('transfer-request', {
+        receiverId,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        totalChunks,
+      });
+
+      addLog(`🔍 DEBUG: waiting for transfer-accepted...`);
+
+      socket.once('transfer-accepted', async (data) => {
+        addLog(`🔍 DEBUG: transfer-accepted fired! transferId: ${data.transferId}`);
+        addLog(`✅ Receiver accepted! Starting transfer...`);
+        document.getElementById('progress').style.display = 'block';
+
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          const chunkBlob = file.slice(start, end);
+          const chunkBuffer = await chunkBlob.arrayBuffer();
+
+          addLog(`🔍 DEBUG: sending chunk ${i + 1}/${totalChunks}`);
+          socket.emit('transfer-chunk', {
+            transferId: data.transferId,
+            chunkIndex: i,
+            chunk: chunkBuffer,
+            receiverId,
+          });
+
+          const pct = Math.round(((i + 1) / totalChunks) * 100);
+          document.getElementById('progressBar').style.width = pct + '%';
+          document.getElementById('progressBar').textContent = pct + '%';
+        }
+
+        addLog(`📦 All chunks sent!`);
+      });
+    }
+
+    // --- File Receiving ---
+    socket.on('transfer-incoming', (data) => {
+      const { metadata } = data;
+      addLog(`📥 Incoming: ${metadata.fileName} from ${metadata.senderId}`);
+
+      const accepted = confirm(`Accept file: ${metadata.fileName}?`);
+
+      if (accepted) {
+        socket.emit('transfer-accept', {
+          transferId: metadata.transferId,
+          metadata,
+        });
+        addLog(`✅ Accepted transfer!`);
+      } else {
+        socket.emit('transfer-reject', {
+          transferId: metadata.transferId,
+          senderId: metadata.senderId,
+        });
+        addLog(`❌ Rejected transfer!`);
+      }
+    });
+
+    socket.on('transfer-progress', (data) => {
+      addLog(`🔍 DEBUG: transfer-progress fired! ${data.receivedChunks}/${data.totalChunks}`);
+      addLog(`📦 Progress: ${data.percentage}%`);
+    });
+
+    socket.on('transfer-rejected', (data) => {
+      addLog(`❌ Receiver rejected the transfer!`);
+  });
+
+    socket.on('transfer-complete', (data) => {
+      addLog(`🔍 DEBUG: transfer-complete fired! fileName: ${data.fileName}`);
+      addLog(`🎉 File received: ${data.fileName}!`);
+
+      const byteCharacters = atob(data.fileData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: data.fileType });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.fileName;
+      a.textContent = `⬇️ Download ${data.fileName}`;
+      a.style.display = 'block';
+      a.style.marginTop = '10px';
+      document.getElementById('downloadArea').appendChild(a);
+    });
+
+    socket.on('transfer-done', (data) => {
+      addLog(`✅ Transfer complete! ID: ${data.transferId}`);
+    });
+
+    socket.on('transfer-error', (data) => {
+      addLog(`❌ Transfer error: ${data.message}`);
+    });
+  </script>
+</body>
+</html>
