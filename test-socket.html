@@ -297,9 +297,9 @@
     // --- File Receiving ---
     socket.on('transfer-incoming', (data) => {
       const { metadata } = data;
-      addLog(`📥 Incoming: ${metadata.fileName} from ${metadata.senderId}`);
+       addLog(`📥 Incoming: ${metadata.fileName} from ${metadata.senderName}`);
 
-      const accepted = confirm(`Accept file: ${metadata.fileName} (${metadata.fileSize} bytes)?`);
+      const accepted = confirm(`📥 ${metadata.senderName} wants to send you:\n\n"${metadata.fileName}"\nSize: ${(metadata.fileSize / 1024).toFixed(1)} KB\n\nAccept?`);
 
       if (accepted) {
         socket.emit('transfer-accept', { transferId: metadata.transferId, metadata });

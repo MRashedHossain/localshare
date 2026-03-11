@@ -12,7 +12,6 @@ import {
   removeTransferSession,
   cancelDeviceTransfers,
 } from '@/services/transfer'
-import { disconnect } from 'cluster';
 
 interface Device {
     id: string,
@@ -50,11 +49,6 @@ export function setupSockets(httpserver: HTTPServer): void {
             yourDevice: device
         })
 
-        socket.broadcast.emit('device-joined',{
-            device,
-            totalDevices: connectedDevices.size
-        })
-
         socket.emit('device-list',{
             devices: Array.from(connectedDevices.values())
         })
@@ -64,6 +58,12 @@ export function setupSockets(httpserver: HTTPServer): void {
             if(device){
                 device.name = data.newName
                 connectedDevices.set(socket.id,device)
+
+                socket.broadcast.emit('device-joined', {
+                    device,
+                    totalDevices: connectedDevices.size
+                 })
+
                 socket.broadcast.emit('device-renamed',{
                     device,
                     totalDevices: connectedDevices.size
@@ -93,15 +93,10 @@ export function setupSockets(httpserver: HTTPServer): void {
 
             socket.emit('room-joined',{room})
 
-            socket.to(room.code).emit('device-joined-room',{
-                device,
-                totalDevices: room.devices.length
-            })
-
             console.log(`✅ ${device.name} joined room: ${room.code}`)
         })
 
-        socket.on('leave- room',(data: {code: string}) => {
+        socket.on('leave-room',(data: {code: string}) => {
             leaveRoom(data.code, socket.id)
 
             socket.leave(data.code)
@@ -170,6 +165,7 @@ export function setupSockets(httpserver: HTTPServer): void {
                 fileType: data.fileType,
                 totalChunks: data.totalChunks,
                 senderId: socket.id,
+                senderName: device.name,
                 receiverId: data.receiverId,
             }
             socket.to(data.receiverId).emit('transfer-incoming', {metadata})
@@ -228,7 +224,7 @@ export function setupSockets(httpserver: HTTPServer): void {
                 return
             }
 
-            const devices = room.devices.map(id => connectedDevices.get(id))
+            const devices = room.devices.map(id => connectedDevices.get(id)).filter(Boolean)
 
             socket.emit('room-devices', {devices})
         })

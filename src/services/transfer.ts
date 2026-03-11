@@ -5,6 +5,7 @@ export interface FileMetaData{
     fileType: string,   
     totalChunks: number,
     senderId: string,
+    senderName: string,
     receiverId: string
 }
 
