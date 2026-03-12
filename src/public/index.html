@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LocalShare</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#6C63FF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LocalShare" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -12,6 +17,7 @@
       --primary-glow: rgba(108, 99, 255, 0.25);
       --success: #2ecc71;
       --danger: #e74c3c;
+      --warning: #f39c12;
       --bg: #080812;
       --card: #0f0f1e;
       --card2: #13132a;
@@ -33,7 +39,6 @@
       overflow-x: hidden;
     }
 
-    /* ===== BACKGROUND GRID ===== */
     body::before {
       content: '';
       position: fixed;
@@ -133,6 +138,7 @@
 
     .notif-file-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .notif-file-size { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+    .notif-transfer-type { font-size: 0.72rem; color: var(--primary); margin-top: 3px; font-weight: 600; }
 
     .notif-actions { display: flex; gap: 8px; }
 
@@ -273,11 +279,7 @@
       box-shadow: 0 4px 20px var(--primary-glow);
     }
 
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      box-shadow: 0 6px 28px rgba(108,99,255,0.4);
-    }
-
+    .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 6px 28px rgba(108,99,255,0.4); }
     .btn-primary:active { transform: scale(0.98); }
 
     /* ===== MAIN APP ===== */
@@ -296,11 +298,7 @@
       z-index: 100;
     }
 
-    .app-header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .app-header-left { display: flex; align-items: center; gap: 10px; }
 
     .app-logo-icon {
       width: 34px;
@@ -313,11 +311,9 @@
       font-size: 1rem;
     }
 
-    .app-title {
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
+    .app-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
 
     .device-badge {
       display: flex;
@@ -345,7 +341,21 @@
       50% { opacity: 0.4; box-shadow: none; }
     }
 
-    #headerDeviceName { color: var(--text); font-weight: 600; }
+    /* PWA Install Button */
+    #installBtn {
+      display: none;
+      padding: 7px 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+    }
+
+    #installBtn.visible { display: block; }
 
     .app-content {
       max-width: 980px;
@@ -359,6 +369,7 @@
     @media (max-width: 640px) {
       .app-content { grid-template-columns: 1fr; padding: 16px; }
       .app-header { padding: 12px 16px; }
+      #incomingNotification { width: calc(100vw - 32px); right: 16px; bottom: 16px; }
     }
 
     .col { display: flex; flex-direction: column; gap: 18px; }
@@ -402,10 +413,7 @@
       transition: border-color 0.2s, background 0.2s;
     }
 
-    .btn-create:hover {
-      border-color: var(--primary);
-      background: rgba(108,99,255,0.06);
-    }
+    .btn-create:hover { border-color: var(--primary); background: rgba(108,99,255,0.06); }
 
     .room-input-group { display: flex; gap: 8px; }
 
@@ -456,14 +464,7 @@
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-    .room-code-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 6px;
-    }
+    .room-code-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
 
     .room-code-value {
       font-family: 'DM Mono', monospace;
@@ -487,11 +488,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
 
-    .qr-code-wrap img {
-      width: 180px;
-      height: 180px;
-      display: block;
-    }
+    .qr-code-wrap img { width: 180px; height: 180px; display: block; }
 
     .qr-url {
       font-size: 0.75rem;
@@ -503,11 +500,7 @@
       padding: 8px 12px;
     }
 
-    .qr-placeholder {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      padding: 20px;
-    }
+    .qr-placeholder { color: var(--text-muted); font-size: 0.85rem; padding: 20px; }
 
     /* ===== DEVICES CARD ===== */
     .devices-list { display: flex; flex-direction: column; gap: 8px; }
@@ -525,11 +518,7 @@
     }
 
     .device-card:hover { border-color: var(--primary); transform: translateY(-1px); }
-
-    .device-card.selected {
-      border-color: var(--primary);
-      background: rgba(108,99,255,0.08);
-    }
+    .device-card.selected { border-color: var(--primary); background: rgba(108,99,255,0.08); }
 
     .device-avatar {
       width: 38px;
@@ -546,21 +535,9 @@
     .device-info { flex: 1; min-width: 0; }
     .device-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .device-status { font-size: 0.72rem; color: var(--success); margin-top: 2px; }
-
-    .device-check {
-      font-size: 1rem;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
+    .device-check { font-size: 1rem; opacity: 0; transition: opacity 0.2s; }
     .device-card.selected .device-check { opacity: 1; }
-
-    .no-devices {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 24px 16px;
-    }
+    .no-devices { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 24px 16px; }
 
     /* ===== SEND FILE CARD ===== */
     .drop-zone {
@@ -574,10 +551,7 @@
       overflow: hidden;
     }
 
-    .drop-zone:hover, .drop-zone.dragover {
-      border-color: var(--primary);
-      background: rgba(108,99,255,0.04);
-    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: rgba(108,99,255,0.04); }
 
     .drop-zone input[type="file"] {
       position: absolute;
@@ -610,6 +584,19 @@
     .file-name { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .file-size { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
 
+    /* Transfer mode badge */
+    .transfer-mode {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      margin-top: 8px;
+      display: inline-block;
+    }
+
+    .transfer-mode.p2p { background: rgba(46,204,113,0.15); color: var(--success); border: 1px solid rgba(46,204,113,0.3); }
+    .transfer-mode.server { background: rgba(243,156,18,0.15); color: var(--warning); border: 1px solid rgba(243,156,18,0.3); }
+
     .btn-send {
       width: 100%;
       padding: 13px;
@@ -640,28 +627,10 @@
       margin-bottom: 10px;
     }
 
-    .progress-filename {
-      font-size: 0.85rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 200px;
-    }
+    .progress-filename { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .progress-pct { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--primary); font-weight: 500; }
 
-    .progress-pct {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--primary);
-      font-weight: 500;
-    }
-
-    .progress-track {
-      background: var(--card2);
-      border-radius: 20px;
-      height: 6px;
-      overflow: hidden;
-    }
+    .progress-track { background: var(--card2); border-radius: 20px; height: 6px; overflow: hidden; margin-bottom: 10px; }
 
     .progress-fill {
       height: 100%;
@@ -670,6 +639,18 @@
       width: 0%;
       transition: width 0.3s ease;
     }
+
+    /* Speed and ETA display */
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .progress-speed { color: var(--success); font-weight: 500; }
+    .progress-type { color: var(--primary); font-weight: 500; }
 
     /* ===== DOWNLOADS CARD ===== */
     #downloadsCard { display: none; }
@@ -692,7 +673,7 @@
     .download-icon { font-size: 1.4rem; flex-shrink: 0; }
     .download-info { flex: 1; min-width: 0; }
     .download-name { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .download-label { font-size: 0.72rem; color: var(--success); margin-top: 2px; }
+    .download-meta { font-size: 0.72rem; color: var(--success); margin-top: 2px; }
     .download-arrow { color: var(--text-muted); font-size: 0.9rem; }
   </style>
 </head>
@@ -713,6 +694,7 @@
   <div class="notif-file">
     <div class="notif-file-name" id="notifFileName">file.pdf</div>
     <div class="notif-file-size" id="notifFileSize">0 KB</div>
+    <div class="notif-transfer-type" id="notifTransferType">⚡ P2P Direct Transfer</div>
   </div>
   <div class="notif-actions">
     <button class="btn-accept" onclick="acceptTransfer()">✅ Accept</button>
@@ -749,9 +731,12 @@
       <div class="app-logo-icon">📡</div>
       <div class="app-title">LocalShare</div>
     </div>
-    <div class="device-badge">
-      <div class="status-dot"></div>
-      <span id="headerDeviceName">...</span>
+    <div class="header-right">
+      <button id="installBtn" onclick="installPWA()">📲 Install App</button>
+      <div class="device-badge">
+        <div class="status-dot"></div>
+        <span id="headerDeviceName">...</span>
+      </div>
     </div>
   </div>
 
@@ -813,6 +798,7 @@
             <div class="file-size" id="selectedFileSize">—</div>
           </div>
         </div>
+        <div id="transferModeInfo" style="text-align:center; margin-top: 8px;"></div>
         <button class="btn-send" onclick="sendFile()">Send File</button>
       </div>
 
@@ -825,6 +811,11 @@
         </div>
         <div class="progress-track">
           <div class="progress-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-stats">
+          <span class="progress-speed" id="progressSpeed">Calculating...</span>
+          <span id="progressEta"></span>
+          <span class="progress-type" id="progressType"></span>
         </div>
       </div>
 
@@ -840,7 +831,12 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  const CHUNK_SIZE = 64 * 1024;
+  // =====================================================
+  // CONSTANTS & STATE
+  // =====================================================
+  const CHUNK_SIZE = 64 * 1024;        // 64KB chunks for server transfer
+  const P2P_CHUNK_SIZE = 256 * 1024;   // 256KB chunks for WebRTC P2P
+
   const socket = io();
 
   let currentRoom = null;
@@ -850,27 +846,83 @@
   let selectedFile = null;
   let pendingTransfer = null;
 
-  // ===== HELPERS =====
+  // WebRTC state
+  // peerConnection = the direct connection between two devices
+  let peerConnection = null;
+  let dataChannel = null;           // the channel that carries file data
+  let isP2PAvailable = false;       // can we use WebRTC?
+  let useP2P = false;               // are we using WebRTC for current transfer?
+
+  // Speed tracking
+  let transferStartTime = null;
+  let transferredBytes = 0;
+  let totalTransferBytes = 0;
+  let speedInterval = null;
+
+  // PWA install
+  let deferredInstallPrompt = null;
+
+  // =====================================================
+  // PWA SETUP
+  // =====================================================
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.log('SW registration failed:', err);
+      });
+    });
+  }
+
+  // Capture the install prompt event
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    // Show install button in header
+    document.getElementById('installBtn').className = 'visible';
+  });
+
+  function installPWA() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      deferredInstallPrompt = null;
+      document.getElementById('installBtn').className = '';
+    });
+  }
+
+  // =====================================================
+  // HELPERS
+  // =====================================================
+
   function showToast(msg) {
     const toast = document.getElementById('toast');
     toast.textContent = msg;
     toast.className = '';
-    void toast.offsetWidth; // force reflow so animation restarts
+    void toast.offsetWidth;
     toast.className = 'visible';
   }
 
   function formatSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+
+  function formatSpeed(bytesPerSecond) {
+    if (bytesPerSecond < 1024) return bytesPerSecond.toFixed(0) + ' B/s';
+    if (bytesPerSecond < 1024 * 1024) return (bytesPerSecond / 1024).toFixed(1) + ' KB/s';
+    return (bytesPerSecond / (1024 * 1024)).toFixed(2) + ' MB/s';
   }
 
   function getFileIcon(fileName) {
-    const ext = fileName.split('.').pop().toLowerCase();
+    const ext = (fileName.split('.').pop() || '').toLowerCase();
     const icons = {
       pdf: '📕', doc: '📝', docx: '📝', txt: '📄',
       jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', webp: '🖼️',
-      mp4: '🎬', mov: '🎬', avi: '🎬',
+      mp4: '🎬', mov: '🎬', avi: '🎬', mkv: '🎬',
       mp3: '🎵', wav: '🎵', flac: '🎵',
       zip: '📦', rar: '📦', '7z': '📦',
       xls: '📊', xlsx: '📊', csv: '📊',
@@ -879,21 +931,52 @@
     return icons[ext] || '📄';
   }
 
-  // ===== CHECK URL FOR AUTO-JOIN =====
-  // When phone scans QR code, URL has ?room=XXXX
-  // We store it and auto-join after name is set
+  // =====================================================
+  // SPEED TRACKING
+  // =====================================================
+
+  function startSpeedTracking(totalBytes) {
+    transferStartTime = Date.now();
+    transferredBytes = 0;
+    totalTransferBytes = totalBytes;
+
+    // Update speed every 500ms
+    speedInterval = setInterval(() => {
+      const elapsed = (Date.now() - transferStartTime) / 1000; // seconds
+      if (elapsed === 0) return;
+
+      const speed = transferredBytes / elapsed; // bytes per second
+      const remaining = totalTransferBytes - transferredBytes;
+      const eta = speed > 0 ? remaining / speed : 0;
+
+      document.getElementById('progressSpeed').textContent = formatSpeed(speed);
+      document.getElementById('progressEta').textContent =
+        eta > 0 ? `~${Math.ceil(eta)}s left` : 'Almost done...';
+    }, 500);
+  }
+
+  function stopSpeedTracking() {
+    if (speedInterval) {
+      clearInterval(speedInterval);
+      speedInterval = null;
+    }
+  }
+
+  function updateProgress(pct, bytesTransferred) {
+    transferredBytes = bytesTransferred;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+  }
+
+  // =====================================================
+  // AUTO-JOIN FROM QR CODE
+  // =====================================================
   const urlParams = new URLSearchParams(window.location.search);
   const autoJoinCode = urlParams.get('room');
 
-  if (autoJoinCode) {
-    // Pre-fill the room code input so user can see it
-    document.addEventListener('DOMContentLoaded', () => {
-      const input = document.getElementById('roomCode');
-      if (input) input.value = autoJoinCode.toUpperCase();
-    });
-  }
-
-  // ===== SETUP =====
+  // =====================================================
+  // SETUP SCREEN
+  // =====================================================
   function submitName() {
     const name = document.getElementById('deviceNameInput').value.trim();
     if (!name) { showToast('Please enter your name!'); return; }
@@ -905,7 +988,7 @@
     document.getElementById('mainApp').style.display = 'block';
     document.getElementById('headerDeviceName').textContent = name;
 
-    // Auto-join room if came from QR code scan
+    // Auto-join if came from QR code
     if (autoJoinCode) {
       setTimeout(() => {
         socket.emit('join-room', { code: autoJoinCode.toUpperCase() });
@@ -914,21 +997,17 @@
     }
   }
 
-  // ===== QR CODE =====
+  // =====================================================
+  // QR CODE
+  // =====================================================
   async function loadQRCode(roomCode) {
     try {
-      // Get server base URL
       const infoRes = await fetch('/info');
       const infoData = await infoRes.json();
-
-      // Build join URL with room code embedded
       const joinUrl = `${infoData.url}?room=${roomCode}`;
-
-      // Get QR code image for that join URL
       const qrRes = await fetch(`/info/qr?url=${encodeURIComponent(joinUrl)}`);
       const qrData = await qrRes.json();
 
-      // Show QR code and URL
       document.getElementById('qrContainer').innerHTML = `
         <div class="qr-code-wrap">
           <img src="${qrData.qrImage}" alt="QR Code" />
@@ -940,7 +1019,9 @@
     }
   }
 
-  // ===== CONNECTION =====
+  // =====================================================
+  // CONNECTION EVENTS
+  // =====================================================
   socket.on('welcome', (data) => {
     myDeviceId = data.yourDevice.id;
   });
@@ -953,14 +1034,15 @@
     showToast(`👋 ${data.deviceName} disconnected`);
     if (data.deviceId === selectedReceiverId) {
       selectedReceiverId = null;
+      isP2PAvailable = false;
       showToast('⚠️ Selected device disconnected!');
     }
   });
 
-  // ===== ROOM =====
-  function createRoom() {
-    socket.emit('create-room');
-  }
+  // =====================================================
+  // ROOM EVENTS
+  // =====================================================
+  function createRoom() { socket.emit('create-room'); }
 
   function joinRoom() {
     const code = document.getElementById('roomCode').value.trim().toUpperCase();
@@ -974,7 +1056,6 @@
     document.getElementById('roomCodeValue').textContent = data.room.code;
     showToast(`🏠 Room ${data.room.code} created!`);
     socket.emit('get-room-devices', { roomCode: data.room.code });
-    // Generate QR code with room code embedded in URL
     loadQRCode(data.room.code);
   });
 
@@ -986,9 +1067,7 @@
     socket.emit('get-room-devices', { roomCode: data.room.code });
   });
 
-  socket.on('room-error', (data) => {
-    showToast(`❌ ${data.message}`);
-  });
+  socket.on('room-error', (data) => { showToast(`❌ ${data.message}`); });
 
   socket.on('device-joined-room', (data) => {
     showToast(`📱 ${data.device.name} joined the room!`);
@@ -1000,7 +1079,9 @@
     if (currentRoom) socket.emit('get-room-devices', { roomCode: currentRoom });
   });
 
-  // ===== DEVICE LIST =====
+  // =====================================================
+  // DEVICE LIST
+  // =====================================================
   socket.on('room-devices', (data) => {
     const deviceList = document.getElementById('deviceList');
     const others = data.devices.filter(d => d.id !== myDeviceId);
@@ -1027,12 +1108,199 @@
         card.classList.add('selected');
         selectedReceiverId = device.id;
         showToast(`🎯 Sending to: ${device.name}`);
+        updateTransferModeDisplay();
       };
       deviceList.appendChild(card);
     });
   });
 
-  // ===== FILE SELECT =====
+  // =====================================================
+  // WEBRTC — P2P CONNECTION
+  // =====================================================
+
+  // ICE servers help devices find each other on the network
+  // STUN server = "tell me my own public IP address"
+  // On local WiFi we usually don't need STUN but it's good practice
+  const ICE_SERVERS = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ]
+  };
+
+  // Create a new WebRTC peer connection
+  function createPeerConnection(targetId) {
+    // Close any existing connection first
+    if (peerConnection) {
+      peerConnection.close();
+      peerConnection = null;
+    }
+
+    // Create the peer connection with ICE servers
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+
+    // When WebRTC finds a new ICE candidate (network path)
+    // send it to the other device via our signaling server (Socket.IO)
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('webrtc-ice-candidate', {
+          targetId,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    // Log connection state changes for debugging
+    peerConnection.onconnectionstatechange = () => {
+      console.log(`🔗 WebRTC state: ${peerConnection.connectionState}`);
+      if (peerConnection.connectionState === 'connected') {
+        showToast('⚡ P2P connection established!');
+        isP2PAvailable = true;
+        updateTransferModeDisplay();
+      } else if (peerConnection.connectionState === 'failed') {
+        showToast('⚠️ P2P failed, using server transfer');
+        isP2PAvailable = false;
+        updateTransferModeDisplay();
+      }
+    };
+
+    return peerConnection;
+  }
+
+  // Show whether we'll use P2P or server for transfer
+  function updateTransferModeDisplay() {
+    const modeDiv = document.getElementById('transferModeInfo');
+    if (!selectedReceiverId) { modeDiv.innerHTML = ''; return; }
+
+    if (isP2PAvailable) {
+      modeDiv.innerHTML = '<span class="transfer-mode p2p">⚡ P2P Direct — No size limit</span>';
+    } else {
+      modeDiv.innerHTML = '<span class="transfer-mode server">🔄 Server relay — Max ~500MB</span>';
+    }
+  }
+
+  // SENDER: Initiate WebRTC connection to receiver
+  async function initiateP2PConnection(targetId) {
+    const pc = createPeerConnection(targetId);
+
+    // Create data channel — this is the pipe that carries file data
+    // "ordered: true" means chunks arrive in order (important for files!)
+    dataChannel = pc.createDataChannel('fileTransfer', { ordered: true });
+
+    dataChannel.onopen = () => {
+      console.log('📡 Data channel open — P2P ready!');
+      isP2PAvailable = true;
+      updateTransferModeDisplay();
+    };
+
+    dataChannel.onclose = () => {
+      console.log('📡 Data channel closed');
+      isP2PAvailable = false;
+    };
+
+    // Create an "offer" — our network info + capabilities
+    const offer = await pc.createOffer();
+
+    // setLocalDescription = "this is MY info"
+    await pc.setLocalDescription(offer);
+
+    // Send offer to receiver via signaling server
+    socket.emit('webrtc-offer', { targetId, offer });
+  }
+
+  // RECEIVER: Got an offer from sender
+  socket.on('webrtc-offer', async (data) => {
+    const pc = createPeerConnection(data.senderId);
+
+    // When receiver gets a data channel from sender
+    pc.ondatachannel = (event) => {
+      dataChannel = event.channel;
+
+      // Variables to collect incoming file chunks
+      let receivedChunks = [];
+      let receivedSize = 0;
+      let expectedSize = 0;
+      let fileName = '';
+      let fileType = '';
+      let receiveStartTime = null;
+
+      dataChannel.onmessage = (e) => {
+        // First message is always metadata (file info)
+        // After that, messages are binary chunks
+        if (typeof e.data === 'string') {
+          // Parse the file metadata
+          const meta = JSON.parse(e.data);
+          fileName = meta.fileName;
+          fileType = meta.fileType;
+          expectedSize = meta.fileSize;
+          receiveStartTime = Date.now();
+
+          // Show progress card
+          document.getElementById('progressCard').className = 'card progress-card visible';
+          document.getElementById('progressFileName').textContent = fileName;
+          document.getElementById('progressType').textContent = '⚡ P2P';
+          startSpeedTracking(expectedSize);
+
+        } else {
+          // Binary chunk received
+          receivedChunks.push(e.data);
+          receivedSize += e.data.byteLength;
+
+          const pct = Math.round((receivedSize / expectedSize) * 100);
+          updateProgress(pct, receivedSize);
+
+          // All chunks received — assemble the file
+            if (receivedSize >= expectedSize) {
+            stopSpeedTracking();
+
+            const blob = new Blob(receivedChunks, { type: fileType });
+            const url = URL.createObjectURL(blob);
+
+            showToast(`🎉 ${fileName} received via P2P!`);
+            addDownloadItem(fileName, fileType, url);
+
+            document.getElementById('progressCard').className = 'card progress-card';
+            document.getElementById('progressSpeed').textContent = 'Done!';
+            document.getElementById('progressEta').textContent = '';
+
+            receivedChunks = [];
+            receivedSize = 0;
+            expectedSize = 0;
+          }
+        }
+      };
+    };
+
+    // setRemoteDescription = "this is THEIR info"
+    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+    // Create our answer
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    // Send answer back via signaling server
+    socket.emit('webrtc-answer', { targetId: data.senderId, answer });
+  });
+
+  // SENDER: Got answer from receiver
+  socket.on('webrtc-answer', async (data) => {
+    if (!peerConnection) return;
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+  });
+
+  // Both sides: Got ICE candidate from other device
+  socket.on('webrtc-ice-candidate', async (data) => {
+    if (!peerConnection) return;
+    try {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    } catch (e) {
+      console.error('ICE candidate error:', e);
+    }
+  });
+
+  // =====================================================
+  // FILE SELECT
+  // =====================================================
   function handleFileSelect(file) {
     if (!file) return;
     selectedFile = file;
@@ -1040,6 +1308,7 @@
     document.getElementById('selectedFileIcon').textContent = getFileIcon(file.name);
     document.getElementById('selectedFileName').textContent = file.name;
     document.getElementById('selectedFileSize').textContent = formatSize(file.size);
+    updateTransferModeDisplay();
   }
 
   // Drag and drop
@@ -1053,16 +1322,80 @@
     if (file) handleFileSelect(file);
   });
 
-  // ===== SEND FILE =====
+  // =====================================================
+  // SEND FILE — tries P2P first, falls back to server
+  // =====================================================
   async function sendFile() {
     if (!selectedReceiverId) { showToast('❌ Select a device first!'); return; }
     if (!selectedFile) { showToast('❌ Select a file first!'); return; }
 
     const file = selectedFile;
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    if (isP2PAvailable && dataChannel && dataChannel.readyState === 'open') {
+      // ✅ USE P2P — direct device to device
+      await sendFileP2P(file);
+    } else {
+      // 🔄 FALLBACK — use server relay
+      // Try to establish P2P for next time
+      initiateP2PConnection(selectedReceiverId);
+      await sendFileViaServer(file);
+    }
+  }
+
+  // =====================================================
+  // P2P FILE TRANSFER
+  // =====================================================
+  async function sendFileP2P(file) {
+    showToast('⚡ Sending via P2P...');
 
     document.getElementById('progressCard').className = 'card progress-card visible';
     document.getElementById('progressFileName').textContent = file.name;
+    document.getElementById('progressType').textContent = '⚡ P2P';
+
+    startSpeedTracking(file.size);
+
+    // First send metadata as a JSON string
+    // Receiver uses this to know what file is coming
+    dataChannel.send(JSON.stringify({
+      fileName: file.name,
+      fileType: file.type || 'application/octet-stream',
+      fileSize: file.size,
+    }));
+
+    // Then send file in chunks
+    const totalChunks = Math.ceil(file.size / P2P_CHUNK_SIZE);
+    let bytesSent = 0;
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * P2P_CHUNK_SIZE;
+      const end = Math.min(start + P2P_CHUNK_SIZE, file.size);
+      const chunk = await file.slice(start, end).arrayBuffer();
+
+      // Wait if data channel buffer is full
+      // This prevents overwhelming the connection
+      while (dataChannel.bufferedAmount > 16 * 1024 * 1024) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      dataChannel.send(chunk);
+      bytesSent += chunk.byteLength;
+
+      const pct = Math.round((bytesSent / file.size) * 100);
+      updateProgress(pct, bytesSent);
+    }
+
+    stopSpeedTracking();
+    document.getElementById('progressSpeed').textContent = 'Done!';
+    document.getElementById('progressEta').textContent = '';
+    showToast('✅ File sent via P2P!');
+    document.getElementById('progressCard').className = 'card progress-card';
+  }
+
+  // =====================================================
+  // SERVER RELAY FILE TRANSFER (fallback)
+  // =====================================================
+  async function sendFileViaServer(file) {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     socket.emit('transfer-request', {
       receiverId: selectedReceiverId,
@@ -1074,8 +1407,16 @@
 
     showToast('📤 Waiting for receiver to accept...');
 
+    document.getElementById('progressCard').className = 'card progress-card visible';
+    document.getElementById('progressFileName').textContent = file.name;
+    document.getElementById('progressType').textContent = '🔄 Server';
+
+    startSpeedTracking(file.size);
+
     socket.once('transfer-accepted', async (data) => {
       showToast('✅ Accepted! Sending...');
+
+      let bytesSent = 0;
 
       for (let i = 0; i < totalChunks; i++) {
         const start = i * CHUNK_SIZE;
@@ -1089,31 +1430,33 @@
           receiverId: selectedReceiverId,
         });
 
-        const pct = Math.round(((i + 1) / totalChunks) * 100);
-        document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('progressPct').textContent = pct + '%';
+        bytesSent += (end - start);
+        const pct = Math.round((bytesSent / file.size) * 100);
+        updateProgress(pct, bytesSent);
       }
     });
 
     socket.once('transfer-rejected', () => {
+      stopSpeedTracking();
       showToast('❌ Transfer was declined!');
       document.getElementById('progressCard').className = 'card progress-card';
     });
   }
 
-  socket.on('transfer-done', () => {
-    showToast('✅ File sent successfully!');
-    document.getElementById('progressCard').className = 'card progress-card';
-  });
-
-  // ===== RECEIVE FILE =====
+  // =====================================================
+  // RECEIVE FILE (server relay)
+  // =====================================================
   socket.on('transfer-incoming', (data) => {
     const { metadata } = data;
     pendingTransfer = metadata;
 
+    // Try to establish P2P connection while user decides
+    initiateP2PConnection(metadata.senderId);
+
     document.getElementById('notifSender').textContent = `from ${metadata.senderName}`;
     document.getElementById('notifFileName').textContent = metadata.fileName;
     document.getElementById('notifFileSize').textContent = formatSize(metadata.fileSize);
+    document.getElementById('notifTransferType').textContent = '🔄 Server Relay Transfer';
     document.getElementById('incomingNotification').className = 'visible';
   });
 
@@ -1124,7 +1467,9 @@
 
     document.getElementById('progressCard').className = 'card progress-card visible';
     document.getElementById('progressFileName').textContent = pendingTransfer.fileName;
+    document.getElementById('progressType').textContent = '🔄 Server';
 
+    startSpeedTracking(pendingTransfer.fileSize);
     showToast('✅ Accepted! Receiving...');
     pendingTransfer = null;
   }
@@ -1138,11 +1483,12 @@
   }
 
   socket.on('transfer-progress', (data) => {
-    document.getElementById('progressBar').style.width = data.percentage + '%';
-    document.getElementById('progressPct').textContent = data.percentage + '%';
+    const bytesReceived = Math.round((data.percentage / 100) * (pendingTransfer?.fileSize || 0));
+    updateProgress(data.percentage, bytesReceived);
   });
 
   socket.on('transfer-complete', (data) => {
+    stopSpeedTracking();
     showToast(`🎉 ${data.fileName} received!`);
 
     const byteCharacters = atob(data.fileData);
@@ -1153,32 +1499,47 @@
     const blob = new Blob([byteArray], { type: data.fileType });
     const url = URL.createObjectURL(blob);
 
-    document.getElementById('downloadsCard').style.display = 'block';
+    addDownloadItem(data.fileName, data.fileType, url);
+    document.getElementById('progressCard').className = 'card progress-card';
+  });
 
-    const item = document.createElement('a');
-    item.href = url;
-    item.download = data.fileName;
-    item.className = 'download-item';
-    item.innerHTML = `
-      <div class="download-icon">${getFileIcon(data.fileName)}</div>
-      <div class="download-info">
-        <div class="download-name">${data.fileName}</div>
-        <div class="download-label">Tap to download</div>
-      </div>
-      <div class="download-arrow">↓</div>
-    `;
-    document.getElementById('downloadArea').prepend(item);
+  socket.on('transfer-done', () => {
+    stopSpeedTracking();
+    showToast('✅ File sent successfully!');
     document.getElementById('progressCard').className = 'card progress-card';
   });
 
   socket.on('transfer-cancelled', (data) => {
+    stopSpeedTracking();
     showToast(`❌ Cancelled: ${data.reason}`);
     document.getElementById('progressCard').className = 'card progress-card';
   });
 
   socket.on('transfer-error', (data) => {
+    stopSpeedTracking();
     showToast(`❌ Error: ${data.message}`);
   });
+
+  // =====================================================
+  // ADD DOWNLOAD ITEM
+  // =====================================================
+  function addDownloadItem(fileName, fileType, url) {
+    document.getElementById('downloadsCard').style.display = 'block';
+
+    const item = document.createElement('a');
+    item.href = url;
+    item.download = fileName;
+    item.className = 'download-item';
+    item.innerHTML = `
+      <div class="download-icon">${getFileIcon(fileName)}</div>
+      <div class="download-info">
+        <div class="download-name">${fileName}</div>
+        <div class="download-meta">Tap to download</div>
+      </div>
+      <div class="download-arrow">↓</div>
+    `;
+    document.getElementById('downloadArea').prepend(item);
+  }
 </script>
 </body>
 </html>

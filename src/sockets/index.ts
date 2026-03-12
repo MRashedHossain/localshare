@@ -248,5 +248,36 @@ export function setupSockets(httpserver: HTTPServer): void {
             })
             console.log(`❌ Transfer cancelled: ${data.transferId}`)
         })
+
+        socket.on('webrtc-offer', (data: {
+            targetId: string,
+            offer: object
+        }) => {
+            socket.to(data.targetId).emit('webrtc-offer',{
+                senderId: socket.id,
+                offer: data.offer
+            })
+            console.log(`🔗 WebRTC offer: ${socket.id} → ${data.targetId}`)
+        })
+
+        socket.on('webrtc-answer', (data: {
+            targetId: string
+            answer: object
+        }) => {
+            socket.to(data.targetId).emit('webrtc-answer', {
+            senderId: socket.id,
+            answer: data.answer,
+        })
+        console.log(`🔗 WebRTC answer: ${socket.id} → ${data.targetId}`)
+        })
+        socket.on('webrtc-ice-candidate', (data: {
+            targetId: string;
+            candidate: object;
+        }) => {
+            socket.to(data.targetId).emit('webrtc-ice-candidate', {
+            senderId: socket.id,
+            candidate: data.candidate,
+        });
+        });
     })
 }
